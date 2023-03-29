@@ -6,5 +6,18 @@
 
     <fragment
         android:id="@+id/navigation_record_list"
-        android:name="com.ivanzhur.timbertest.fragment.list.RecordListFragment" />
+        android:name="com.ivanzhur.timbertest.fragment.list.RecordListFragment" >
+        <action
+            android:id="@+id/action_navigation_record_list_to_navigation_measurement"
+            app:destination="@id/navigation_measurement" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_measurement"
+        android:name="com.ivanzhur.timbertest.fragment.measure.MeasurementFragment" >
+
+        <argument
+            android:name="image_uri"
+            app:argType="android.net.Uri" />
+    </fragment>
 </navigation>

@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">TimberTest</string>
     <string name="list_button_new_measurement">New measurement</string>
+    <string name="measurement_button_save">Save</string>
+    <string name="measurement_button_length">Measure\nlength</string>
+    <string name="measurement_button_diameter">Measure\ndiameter</string>
+    <string name="measurement_button_reset_length">Reset\nlength</string>
+    <string name="measurement_button_reset_diameter">Reset\nDiameter</string>
+    <string name="measurement_guidance">Press corresponding button to measure length or diameter of a log and then draw a line on image. You can reset measurement and try again if you don\'t like it.</string>
 </resources>
