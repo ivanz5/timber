@@ -9,7 +9,7 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class DataModule {
+abstract class RepositoryModule {
 
     @Binds
     internal abstract fun bindStorageRepository(storageRepositoryImpl: StorageRepositoryImpl): StorageRepository

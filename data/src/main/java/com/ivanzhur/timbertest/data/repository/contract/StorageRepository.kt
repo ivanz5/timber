@@ -1,8 +1,11 @@
 package com.ivanzhur.timbertest.data.repository.contract
 
-import com.ivanzhur.timbertest.data.model.RecordModel
+import com.ivanzhur.timbertest.core.model.RecordModel
+import kotlinx.coroutines.flow.Flow
 
 interface StorageRepository {
 
-    fun getRecordsList(): List<RecordModel>
+    suspend fun getRecordsList(): Flow<List<RecordModel>>
+
+    suspend fun saveRecord(record: RecordModel)
 }

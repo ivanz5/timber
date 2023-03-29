@@ -19,7 +19,7 @@ class RecordListFragment : BaseFragmentWithViewModel<FragmentListBinding, Record
         ui.recyclerView.layoutManager = LinearLayoutManager(context)
         ui.recyclerView.adapter = adapter
 
-        viewModel.loadList()
+        ui.button.setOnClickListener { viewModel.testNewItem() }
     }
 
     override fun observeLiveData() {

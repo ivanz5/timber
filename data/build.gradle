@@ -38,7 +38,10 @@ android {
 }
 
 dependencies {
+    implementation(project(path: ":core"))
+
     def commonDependencies = rootProject.ext.commonDependencies
+    def dataDependencies = rootProject.ext.dataDependencies
 
     coreLibraryDesugaring(commonDependencies.desugaring)
 
@@ -48,6 +51,10 @@ dependencies {
 
     implementation(commonDependencies.hilt)
     kapt(commonDependencies.hiltProcessor)
+
+    implementation(dataDependencies.room)
+    implementation(dataDependencies.roomKtx)
+    kapt(dataDependencies.roomCompiler)
 
     implementation(commonDependencies.javaxInject)
 

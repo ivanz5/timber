@@ -17,7 +17,7 @@ ext {
     kotlinCoroutinesVersion = "1.4.0"
     ktxVersion = "1.6.0"
 
-    retrofitVersion = "2.9.0"
+    roomVersion = "2.4.0"
     
     chuckVersion = "3.5.2"
     timberVersion = "4.7.1"
@@ -42,9 +42,6 @@ ext {
             hilt                    : "com.google.dagger:hilt-android:$hiltVersion",
             hiltProcessor           : "com.google.dagger:hilt-android-compiler:$hiltVersion",
 
-            retrofit                : "com.squareup.retrofit2:retrofit:$retrofitVersion",
-            retrofitConverter       : "com.squareup.retrofit2:converter-gson:$retrofitVersion",
-
             timber                  : "com.jakewharton.timber:timber:$timberVersion",
 
             junit                   : "junit:junit:$junitVersion",
@@ -65,5 +62,11 @@ ext {
 
             picasso                 : "com.squareup.picasso:picasso:$picassoVersion",
             photoView               : "com.github.chrisbanes:PhotoView:$photoViewVersion",
+    ]
+
+    dataDependencies = [
+            room                    : "androidx.room:room-runtime:$roomVersion",
+            roomKtx                 : "androidx.room:room-ktx:$roomVersion",
+            roomCompiler            : "androidx.room:room-compiler:$roomVersion"
     ]
 }

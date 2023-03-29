@@ -7,7 +7,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ivanzhur.timbertest.R
-import com.ivanzhur.timbertest.data.model.RecordModel
+import com.ivanzhur.timbertest.core.model.RecordModel
 import com.ivanzhur.timbertest.databinding.ItemRecordBinding
 
 class RecordListAdapter(
