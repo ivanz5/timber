@@ -1,6 +1,7 @@
 package com.ivanzhur.timbertest.fragment.measure
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.graphics.*
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -42,6 +43,8 @@ class MeasurementFragment : BaseFragmentWithViewModel<FragmentMeasurementBinding
     override fun onViewModelCreated() {
         ui.image.setImageURI(args.imageUri)
 
+        setupInitialData()
+
         ui.lengthButton.setOnClickListener {
             viewModel.onLengthClick()
         }
@@ -57,6 +60,23 @@ class MeasurementFragment : BaseFragmentWithViewModel<FragmentMeasurementBinding
                 MotionEvent.ACTION_UP -> viewModel.onTouchUp(motionEvent.x, motionEvent.y)
             }
             return@setOnTouchListener true
+        }
+    }
+
+    private fun setupInitialData() {
+        // Get bitmap of selected image to know its size
+        val inputStream = requireContext().contentResolver.openInputStream(args.imageUri)
+        val bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream?.close()
+
+        // Use .post so that View will be laid out and measured at this time.
+        // canvasImage and image Views are of the same size
+        ui.canvasImage.post {
+            viewModel.setImageData(
+                bitmap.width, bitmap.height,
+                ui.canvasImage.measuredWidth, ui.canvasImage.measuredHeight,
+                resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT,
+            )
         }
     }
 
