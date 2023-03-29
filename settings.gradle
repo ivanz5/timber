@@ -1,0 +1,4 @@
+rootProject.name = "TimberTest"
+include ':app'
+include ':core'
+include ':data'

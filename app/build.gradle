@@ -1,0 +1,76 @@
+plugins {
+    id("com.android.application")
+    id("kotlin-android")
+    id("kotlin-kapt")
+    id("androidx.navigation.safeargs.kotlin")
+    id("dagger.hilt.android.plugin")
+}
+
+android {
+    def globalConfiguration = rootProject.extensions.getByName("ext")
+
+    namespace 'com.ivanzhur.timbertest'
+    compileSdk globalConfiguration["targetSdkVersion"]
+
+    defaultConfig {
+        applicationId "com.ivanzhur.timbertest"
+        minSdk globalConfiguration["minSdkVersion"]
+        targetSdk globalConfiguration["targetSdkVersion"]
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation(project(path: ":core"))
+    implementation(project(path: ":data"))
+
+    def commonDependencies = rootProject.ext.commonDependencies
+    def appDependencies = rootProject.ext.appDependencies
+
+    coreLibraryDesugaring(commonDependencies.desugaring)
+
+    implementation(commonDependencies.kotlin)
+    implementation(commonDependencies.kotlinCoroutines)
+    implementation(commonDependencies.ktx)
+
+    implementation(appDependencies.navigationFragment)
+    implementation(appDependencies.navigationUi)
+
+    implementation(appDependencies.appCompat)
+    implementation(appDependencies.material)
+    implementation(appDependencies.constraint)
+
+    implementation(appDependencies.picasso)
+
+    implementation(commonDependencies.hilt)
+    kapt(commonDependencies.hiltProcessor)
+
+    testImplementation(commonDependencies.junit)
+
+    androidTestImplementation(commonDependencies.junitExt)
+    androidTestImplementation(commonDependencies.espresso)
+}

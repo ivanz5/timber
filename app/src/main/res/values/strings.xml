@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">TimberTest</string>
+    <string name="list_button_new_measurement">New measurement</string>
+</resources>
