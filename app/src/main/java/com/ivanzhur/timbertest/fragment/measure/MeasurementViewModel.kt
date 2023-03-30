@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.ivanzhur.timbertest.core.viewmodel.BaseViewModel
 import com.ivanzhur.timbertest.data.repository.contract.StorageRepository
 import com.ivanzhur.timbertest.model.LinesDisplayData
+import com.ivanzhur.timbertest.model.LinesMeasurementData
+import com.ivanzhur.timbertest.util.ifAllNotNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 @HiltViewModel
 class MeasurementViewModel @Inject constructor(
@@ -21,6 +25,7 @@ class MeasurementViewModel @Inject constructor(
     var lastLinesDataToDisplay: LinesDisplayData? = null
     var lastLinesDataOnImage: LinesDisplayData? = null
     val linesDataFlow = MutableStateFlow<LinesDisplayData?>(null)
+    val linesMeasurementFlow = MutableStateFlow<LinesMeasurementData?>(null)
 
     var imageStartXPortrait = 0f
     var imageStartYPortrait = 0f
@@ -33,6 +38,10 @@ class MeasurementViewModel @Inject constructor(
 
     enum class State {
         IDLE, DRAWING_LENGTH, DRAWING_DIAMETER
+    }
+
+    enum class ValidityState {
+        VALID, INVALID_INTERSECT, INVALID_TOO_FAR
     }
 
     init {
@@ -176,14 +185,13 @@ class MeasurementViewModel @Inject constructor(
             lengthEndX = null,
             lengthEndY = null,
         )
-        lastLinesDataToDisplay = newPoint
         lastLinesDataOnImage = (lastLinesDataOnImage ?: LinesDisplayData()).copy(
             lengthStartX = convertCanvasXToImageX(newPoint.lengthStartX),
             lengthStartY = convertCanvasYToImageY(newPoint.lengthStartY),
             lengthEndX = null,
             lengthEndY = null,
         )
-        linesDataFlow.emit(newPoint)
+        updatePointAndMeasureData(newPoint)
     }
 
     private suspend fun updateStartDiameter(startX: Float?, startY: Float?) {
@@ -193,14 +201,13 @@ class MeasurementViewModel @Inject constructor(
             diameterEndX = null,
             diameterEndY = null,
         )
-        lastLinesDataToDisplay = newPoint
         lastLinesDataOnImage = (lastLinesDataOnImage ?: LinesDisplayData()).copy(
             diameterStartX = convertCanvasXToImageX(newPoint.diameterStartX),
             diameterStartY = convertCanvasYToImageY(newPoint.diameterStartY),
             diameterEndX = null,
             diameterEndY = null,
         )
-        linesDataFlow.emit(newPoint)
+        updatePointAndMeasureData(newPoint)
     }
 
     private suspend fun updateEndLength(endX: Float, endY: Float) {
@@ -212,8 +219,7 @@ class MeasurementViewModel @Inject constructor(
             lengthEndX = convertCanvasXToImageX(newPoint.lengthEndX),
             lengthEndY = convertCanvasYToImageY(newPoint.lengthEndY),
         )
-        lastLinesDataToDisplay = newPoint
-        linesDataFlow.emit(newPoint)
+        updatePointAndMeasureData(newPoint)
     }
 
     private suspend fun updateEndDiameter(endX: Float, endY: Float) {
@@ -225,8 +231,7 @@ class MeasurementViewModel @Inject constructor(
             diameterEndX = convertCanvasXToImageX(newPoint.diameterEndX),
             diameterEndY = convertCanvasYToImageY(newPoint.diameterEndY),
         )
-        lastLinesDataToDisplay = newPoint
-        linesDataFlow.emit(newPoint)
+        updatePointAndMeasureData(newPoint)
     }
 
     private fun handleConfigurationChange() {
@@ -244,5 +249,60 @@ class MeasurementViewModel @Inject constructor(
         viewModelScope.launch {
             linesDataFlow.emit(newDisplayData)
         }
+    }
+
+    private suspend fun updatePointAndMeasureData(newDisplayPoint: LinesDisplayData) {
+        lastLinesDataToDisplay = newDisplayPoint
+        linesDataFlow.emit(newDisplayPoint)
+        measureDataAndUpdate()
+    }
+
+    private fun getMeasuredData(): LinesMeasurementData {
+        val lengthValue: Float? = ifAllNotNull(
+            lastLinesDataOnImage?.lengthStartX, lastLinesDataOnImage?.lengthStartY,
+            lastLinesDataOnImage?.lengthEndX, lastLinesDataOnImage?.lengthEndY,
+        ) { xA, yA, xB, yB ->
+            sqrt((xA - xB).pow(2) + (yA - yB).pow(2))
+        }
+
+        val diameterValue: Float? = ifAllNotNull(
+            lastLinesDataOnImage?.diameterStartX, lastLinesDataOnImage?.diameterStartY,
+            lastLinesDataOnImage?.diameterEndX, lastLinesDataOnImage?.diameterEndY,
+        ) { xA, yA, xB, yB ->
+            sqrt((xA - xB).pow(2) + (yA - yB).pow(2))
+        }
+
+        return LinesMeasurementData(lengthValue, diameterValue)
+    }
+
+    private suspend fun measureDataAndUpdate() {
+        val newMeasurement = getMeasuredData()
+        linesMeasurementFlow.emit(newMeasurement)
+    }
+
+    private fun validateData(): ValidityState {
+        val diameterStartX = lastLinesDataToDisplay?.diameterStartX ?: return ValidityState.VALID
+        val diameterStartY = lastLinesDataToDisplay?.diameterStartY ?: return ValidityState.VALID
+        val diameterEndX = lastLinesDataToDisplay?.diameterEndX ?: return ValidityState.VALID
+        val diameterEndY = lastLinesDataToDisplay?.diameterEndY ?: return ValidityState.VALID
+        val lengthStartX = lastLinesDataToDisplay?.lengthStartX ?: return ValidityState.VALID
+        val lengthStartY = lastLinesDataToDisplay?.lengthStartY ?: return ValidityState.VALID
+        val lengthEndX = lastLinesDataToDisplay?.lengthEndX ?: return ValidityState.VALID
+        val lengthEndY = lastLinesDataToDisplay?.lengthEndY ?: return ValidityState.VALID
+
+        val diameterCenterX = diameterEndX - diameterStartX
+        val diameterCenterY = diameterEndY - diameterStartY
+
+
+        val diameterValue: Float? = ifAllNotNull(
+            lastLinesDataOnImage?.diameterStartX, lastLinesDataOnImage?.diameterStartY,
+            lastLinesDataOnImage?.diameterEndX, lastLinesDataOnImage?.diameterEndY,
+        ) { xA, yA, xB, yB ->
+            sqrt((xA - xB).pow(2) + (yA - yB).pow(2))
+        }
+
+        val newMeasurement = getMeasuredData()
+
+        return ValidityState.VALID
     }
 }

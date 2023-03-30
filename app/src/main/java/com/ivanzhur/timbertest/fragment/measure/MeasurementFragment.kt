@@ -97,6 +97,19 @@ class MeasurementFragment : BaseFragmentWithViewModel<FragmentMeasurementBinding
                 linesData?.let { drawLines(it) }
             }
         }
+
+        lifecycleScope.launch {
+            viewModel.linesMeasurementFlow.sample(UPDATE_INTERVAL).collect { measurementData ->
+                measurementData?.let {
+                    val stringBuilder = StringBuilder()
+                    if (it.lengthValue != null)
+                        stringBuilder.append(getString(R.string.measurement_result_length, it.lengthValue))
+                    if (it.diameterValue != null)
+                        stringBuilder.append(getString(R.string.measurement_result_diameter, it.diameterValue))
+                    ui.results.text = stringBuilder.toString()
+                }
+            }
+        }
     }
 
     private fun drawLines(linesData: LinesDisplayData, ) {

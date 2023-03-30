@@ -28,14 +28,13 @@
     <TextView
         android:id="@+id/results"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="160dp"
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
         app:autoSizeTextType="uniform"
         app:autoSizeMinTextSize="11sp"
         app:autoSizeMaxTextSize="16sp"
         android:textColor="@color/black"
-        android:lines="6"
         app:layout_constraintBottom_toTopOf="@+id/length_button"
         android:text="@string/measurement_guidance" />
 
