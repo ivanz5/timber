@@ -20,6 +20,6 @@ object DatabaseModule {
             context,
             TimberTestDatabase::class.java,
             TimberTestDatabase.DATABASE_NAME,
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 }

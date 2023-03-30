@@ -1,17 +1,22 @@
 package com.ivanzhur.timbertest.fragment.measure
 
+import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.ivanzhur.timbertest.core.model.RecordModel
 import com.ivanzhur.timbertest.core.viewmodel.BaseViewModel
 import com.ivanzhur.timbertest.data.repository.contract.StorageRepository
 import com.ivanzhur.timbertest.model.LinesDisplayData
 import com.ivanzhur.timbertest.model.LinesMeasurementData
 import com.ivanzhur.timbertest.util.ifAllNotNull
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -22,32 +27,65 @@ class MeasurementViewModel @Inject constructor(
 
     val stateLiveData = MutableLiveData<State>()
 
-    var lastLinesDataToDisplay: LinesDisplayData? = null
-    var lastLinesDataOnImage: LinesDisplayData? = null
+    /**
+     * Last drawn data in canvas coordinates
+     */
+    private var lastLinesDataToDisplay: LinesDisplayData? = null
+
+    /**
+     * Last drawn data in image coordinates
+     */
+    private var lastLinesDataOnImage: LinesDisplayData? = null
+
+    /**
+     * Lines data flow for UI update
+     */
     val linesDataFlow = MutableStateFlow<LinesDisplayData?>(null)
+
+    /**
+     * Measurement values flow for UI update
+     */
     val linesMeasurementFlow = MutableStateFlow<LinesMeasurementData?>(null)
 
-    var imageStartXPortrait = 0f
-    var imageStartYPortrait = 0f
-    var imageStartXLandscape = 0f
-    var imageStartYLandscape = 0f
-    var canvasToImageRatioPortrait = 1f
-    var canvasToImageRatioLandscape = 1f
+    /**
+     * Emit [ValidityState.VALID] to mark successful data save.
+     * Emit other states to mark corresponding validation errors.
+     */
+    val saveValidityStateFlow = MutableStateFlow<ValidityState?>(null)
 
-    var currentOrientationIsPortrait: Boolean? = null
+    // These values are used to convert between 'image' coordinates and 'canvas' coordinates
+    private var imageStartXPortrait = 0f
+    private var imageStartYPortrait = 0f
+    private var imageStartXLandscape = 0f
+    private var imageStartYLandscape = 0f
+    private var canvasToImageRatioPortrait = 1f
+    private var canvasToImageRatioLandscape = 1f
+    private var currentOrientationIsPortrait: Boolean? = null
 
+    /**
+     * Represents which line is being drawn at the moment
+     */
     enum class State {
         IDLE, DRAWING_LENGTH, DRAWING_DIAMETER
     }
 
+    /**
+     * Represents validity state for given canvas situation (drawn lines).
+     */
     enum class ValidityState {
-        VALID, INVALID_INTERSECT, INVALID_TOO_FAR
+        NO_LENGTH, // Length line is missing
+        NO_DIAMETER, // Diameter line is missing
+        VALID, // Data is valid
+        INVALID_TOO_FAR, // Length line is too far from the diameter circle on image
     }
 
     init {
         stateLiveData.value = State.IDLE
     }
 
+    /**
+     * Calculate values
+     */
     fun setImageData(
         imageWidthPixels: Int,
         imageHeightPixels: Int,
@@ -60,6 +98,7 @@ class MeasurementViewModel @Inject constructor(
         val canvasWhRatio = canvasWidthPixels.toFloat() / canvasHeightPixels.toFloat()
 
         val canvasToImageRatio: Float
+        // Coordinates of image top-left corner relative to canvas
         val imageStartX: Float
         val imageStartY: Float
 
@@ -126,6 +165,30 @@ class MeasurementViewModel @Inject constructor(
         }
     }
 
+    fun onSaveClick(imageUri: Uri) = launch {
+        val validationResult = validateData()
+        if (validationResult == ValidityState.VALID) {
+            val measurementData = getMeasuredData()
+            val record = RecordModel(
+                0, imageUri,
+                lastLinesDataOnImage?.lengthStartX ?: 0f,
+                lastLinesDataOnImage?.lengthStartY ?: 0f,
+                lastLinesDataOnImage?.lengthEndX ?: 0f,
+                lastLinesDataOnImage?.lengthEndY ?: 0f,
+                lastLinesDataOnImage?.diameterStartX ?: 0f,
+                lastLinesDataOnImage?.diameterStartY ?: 0f,
+                lastLinesDataOnImage?.diameterEndX ?: 0f,
+                lastLinesDataOnImage?.diameterEndY ?: 0f,
+                measurementData.lengthValue ?: 0f,
+                measurementData.diameterValue ?: 0f,
+            )
+            withContext(Dispatchers.IO) {
+                storageRepository.saveRecord(record)
+            }
+        }
+        saveValidityStateFlow.emit(validationResult)
+    }
+
     fun onTouchDown(x: Float, y: Float) = launch {
         when (stateLiveData.value) {
             State.DRAWING_LENGTH -> updateStartLength(x, y)
@@ -140,10 +203,6 @@ class MeasurementViewModel @Inject constructor(
             State.DRAWING_DIAMETER -> updateEndDiameter(x, y)
             else -> {}
         }
-    }
-
-    fun onTouchUp(x: Float, y: Float) {
-
     }
 
     private fun convertCanvasXToImageX(x: Float?): Float? {
@@ -178,6 +237,9 @@ class MeasurementViewModel @Inject constructor(
         return y * canvasToImageRatio + imageStartY
     }
 
+    /**
+     * Call on ACTION_DOWN event to update length line start
+     */
     private suspend fun updateStartLength(startX: Float?, startY: Float?) {
         val newPoint = (lastLinesDataToDisplay ?: LinesDisplayData()).copy(
             lengthStartX = startX,
@@ -194,6 +256,9 @@ class MeasurementViewModel @Inject constructor(
         updatePointAndMeasureData(newPoint)
     }
 
+    /**
+     * Call on ACTION_DOWN event to update diameter line start
+     */
     private suspend fun updateStartDiameter(startX: Float?, startY: Float?) {
         val newPoint = (lastLinesDataToDisplay ?: LinesDisplayData()).copy(
             diameterStartX = startX,
@@ -210,6 +275,10 @@ class MeasurementViewModel @Inject constructor(
         updatePointAndMeasureData(newPoint)
     }
 
+    /**
+     * Call on ACTION_MOVE event to update length line end,
+     * which if where the finger is currently located
+     */
     private suspend fun updateEndLength(endX: Float, endY: Float) {
         val newPoint = (lastLinesDataToDisplay ?: LinesDisplayData()).copy(
             lengthEndX = endX,
@@ -222,6 +291,10 @@ class MeasurementViewModel @Inject constructor(
         updatePointAndMeasureData(newPoint)
     }
 
+    /**
+     * Call on ACTION_MOVE event to update diameter line end,
+     * which if where the finger is currently located
+     */
     private suspend fun updateEndDiameter(endX: Float, endY: Float) {
         val newPoint = (lastLinesDataToDisplay ?: LinesDisplayData()).copy(
             diameterEndX = endX,
@@ -234,6 +307,11 @@ class MeasurementViewModel @Inject constructor(
         updatePointAndMeasureData(newPoint)
     }
 
+    /**
+     * When configuration is changed take data in image coordinates
+     * and convert it to canvas coordinates for corresponding orientation.
+     * Data in image coordinates doesn't change on orientation changes.
+     */
     private fun handleConfigurationChange() {
         val newDisplayData = lastLinesDataOnImage?.copy(
             lengthStartX = convertImageXToCanvasX(lastLinesDataOnImage?.lengthStartX),
@@ -254,7 +332,8 @@ class MeasurementViewModel @Inject constructor(
     private suspend fun updatePointAndMeasureData(newDisplayPoint: LinesDisplayData) {
         lastLinesDataToDisplay = newDisplayPoint
         linesDataFlow.emit(newDisplayPoint)
-        measureDataAndUpdate()
+        val newMeasurement = getMeasuredData()
+        linesMeasurementFlow.emit(newMeasurement)
     }
 
     private fun getMeasuredData(): LinesMeasurementData {
@@ -275,34 +354,43 @@ class MeasurementViewModel @Inject constructor(
         return LinesMeasurementData(lengthValue, diameterValue)
     }
 
-    private suspend fun measureDataAndUpdate() {
-        val newMeasurement = getMeasuredData()
-        linesMeasurementFlow.emit(newMeasurement)
+    /**
+     * Data validation:
+     * 1. Both lines must be drawn.
+     * 2. One of length line ends must be on the diameter circle (with some precision).
+     *
+     * Also it's good to check that length line don't intersect the diameter circle,
+     * meaning that some of its part is inside the circle and it intersects the outer
+     * stroke in 2 places. But it's not implemented here.
+     */
+    private fun validateData(): ValidityState {
+        val lengthStartX = lastLinesDataToDisplay?.lengthStartX ?: return ValidityState.NO_LENGTH
+        val lengthStartY = lastLinesDataToDisplay?.lengthStartY ?: return ValidityState.NO_LENGTH
+        val lengthEndX = lastLinesDataToDisplay?.lengthEndX ?: return ValidityState.NO_LENGTH
+        val lengthEndY = lastLinesDataToDisplay?.lengthEndY ?: return ValidityState.NO_LENGTH
+        val diameterStartX = lastLinesDataToDisplay?.diameterStartX ?: return ValidityState.NO_DIAMETER
+        val diameterStartY = lastLinesDataToDisplay?.diameterStartY ?: return ValidityState.NO_DIAMETER
+        val diameterEndX = lastLinesDataToDisplay?.diameterEndX ?: return ValidityState.NO_DIAMETER
+        val diameterEndY = lastLinesDataToDisplay?.diameterEndY ?: return ValidityState.NO_DIAMETER
+
+
+        val circleCenterX = diameterEndX - diameterStartX
+        val circleCenterY = diameterEndY - diameterStartY
+        val radius: Float = sqrt((diameterEndX - diameterStartX).pow(2) + (diameterEndY - diameterStartY).pow(2)) / 2
+        val distanceToLengthStart = sqrt((circleCenterX - lengthStartX).pow(2) + (circleCenterY - lengthStartY).pow(2)) / 2
+        val distanceToLengthEnd = sqrt((circleCenterX - lengthEndX).pow(2) + (circleCenterY - lengthEndY).pow(2)) / 2
+
+        return if (abs(distanceToLengthStart - radius) <= LINE_ON_CIRCLE_TOLERANCE
+            || abs(distanceToLengthEnd - radius) <= LINE_ON_CIRCLE_TOLERANCE) ValidityState.VALID
+        else ValidityState.INVALID_TOO_FAR
     }
 
-    private fun validateData(): ValidityState {
-        val diameterStartX = lastLinesDataToDisplay?.diameterStartX ?: return ValidityState.VALID
-        val diameterStartY = lastLinesDataToDisplay?.diameterStartY ?: return ValidityState.VALID
-        val diameterEndX = lastLinesDataToDisplay?.diameterEndX ?: return ValidityState.VALID
-        val diameterEndY = lastLinesDataToDisplay?.diameterEndY ?: return ValidityState.VALID
-        val lengthStartX = lastLinesDataToDisplay?.lengthStartX ?: return ValidityState.VALID
-        val lengthStartY = lastLinesDataToDisplay?.lengthStartY ?: return ValidityState.VALID
-        val lengthEndX = lastLinesDataToDisplay?.lengthEndX ?: return ValidityState.VALID
-        val lengthEndY = lastLinesDataToDisplay?.lengthEndY ?: return ValidityState.VALID
+    companion object {
 
-        val diameterCenterX = diameterEndX - diameterStartX
-        val diameterCenterY = diameterEndY - diameterStartY
-
-
-        val diameterValue: Float? = ifAllNotNull(
-            lastLinesDataOnImage?.diameterStartX, lastLinesDataOnImage?.diameterStartY,
-            lastLinesDataOnImage?.diameterEndX, lastLinesDataOnImage?.diameterEndY,
-        ) { xA, yA, xB, yB ->
-            sqrt((xA - xB).pow(2) + (yA - yB).pow(2))
-        }
-
-        val newMeasurement = getMeasuredData()
-
-        return ValidityState.VALID
+        /**
+         * Maximum distance between outer circle stroke and one of length line ends
+         * for the measurement to be considered valid
+         */
+        const val LINE_ON_CIRCLE_TOLERANCE = 100f
     }
 }

@@ -8,4 +8,6 @@ interface StorageRepository {
     suspend fun getRecordsList(): Flow<List<RecordModel>>
 
     suspend fun saveRecord(record: RecordModel)
+
+    fun getRecord(id: Int): RecordModel
 }

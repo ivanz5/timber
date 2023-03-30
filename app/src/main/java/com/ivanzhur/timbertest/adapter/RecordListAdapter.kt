@@ -38,7 +38,11 @@ class RecordListAdapter(
         private val ui = ItemRecordBinding.bind(itemView)
 
         fun bind(item: RecordModel) {
-            ui.text.text = item.id.toString()
+            ui.image.setImageURI(item.imageUri)
+            ui.text.text = itemView.context.getString(
+                R.string.list_item_description,
+                item.id, item.lengthValue, item.diameterValue
+            )
             itemView.setOnClickListener { onItemClicked(item) }
         }
     }

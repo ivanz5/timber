@@ -22,4 +22,8 @@ class StorageRepositoryImpl @Inject constructor(
     override suspend fun saveRecord(record: RecordModel) {
         db.recordsDao().saveRecord(record.mapToEntity())
     }
+
+    override fun getRecord(id: Int): RecordModel {
+        return db.recordsDao().getRecord(id).mapToModel()
+    }
 }

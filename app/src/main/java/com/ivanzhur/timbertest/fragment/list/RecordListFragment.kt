@@ -1,5 +1,6 @@
 package com.ivanzhur.timbertest.fragment.list
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,8 +20,10 @@ class RecordListFragment : BaseFragmentWithViewModel<FragmentListBinding, Record
      * If the image was selected by user - navigate to [MeasurementFragment] passing image Uri.
      */
     private val imagePickLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.OpenDocument()
     ) { uri ->
+//        requireActivity().applicationContext.grantUriPermission(requireActivity().packageName, uri, Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        requireActivity().contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         uri?.let {
             val action = RecordListFragmentDirections.actionNavigationRecordListToNavigationMeasurement(it)
             findNavController().navigate(action)
@@ -28,7 +31,8 @@ class RecordListFragment : BaseFragmentWithViewModel<FragmentListBinding, Record
     }
 
     private val adapter = RecordListAdapter { item ->
-
+        val action = RecordListFragmentDirections.actionNavigationRecordListToNavigationDetails(item.id)
+        findNavController().navigate(action)
     }
 
     override fun onViewModelCreated() {
@@ -38,7 +42,7 @@ class RecordListFragment : BaseFragmentWithViewModel<FragmentListBinding, Record
         // Launch image picker.
         // If the image was selected - it will be handled by imagePickLauncher
         ui.button.setOnClickListener {
-            imagePickLauncher.launch("image/*")
+            imagePickLauncher.launch(arrayOf("image/*"))
         }
     }
 

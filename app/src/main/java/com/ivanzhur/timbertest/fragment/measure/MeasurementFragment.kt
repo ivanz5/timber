@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.ivanzhur.timbertest.R
 import com.ivanzhur.timbertest.core.fragment.BaseFragmentWithViewModel
@@ -53,11 +54,14 @@ class MeasurementFragment : BaseFragmentWithViewModel<FragmentMeasurementBinding
             viewModel.onDiameterClick()
         }
 
+        ui.saveButton.setOnClickListener {
+            viewModel.onSaveClick(args.imageUri)
+        }
+
         ui.image.setOnTouchListener { _, motionEvent ->
             when (motionEvent.action) {
                 MotionEvent.ACTION_DOWN -> viewModel.onTouchDown(motionEvent.x, motionEvent.y)
                 MotionEvent.ACTION_MOVE -> viewModel.onMove(motionEvent.x, motionEvent.y)
-                MotionEvent.ACTION_UP -> viewModel.onTouchUp(motionEvent.x, motionEvent.y)
             }
             return@setOnTouchListener true
         }
@@ -110,9 +114,21 @@ class MeasurementFragment : BaseFragmentWithViewModel<FragmentMeasurementBinding
                 }
             }
         }
+
+        lifecycleScope.launch {
+            viewModel.saveValidityStateFlow.collect { validationState ->
+                when (validationState) {
+                    MeasurementViewModel.ValidityState.VALID -> findNavController().navigateUp()
+                    MeasurementViewModel.ValidityState.NO_LENGTH -> showToast(getString(R.string.measurement_invalid_length))
+                    MeasurementViewModel.ValidityState.NO_DIAMETER -> showToast(getString(R.string.measurement_invalid_diameter))
+                    MeasurementViewModel.ValidityState.INVALID_TOO_FAR -> showToast(getString(R.string.measurement_invalid_distance))
+                    else -> {}
+                }
+            }
+        }
     }
 
-    private fun drawLines(linesData: LinesDisplayData, ) {
+    private fun drawLines(linesData: LinesDisplayData) {
         val bitmap = Bitmap.createBitmap(
             ui.canvasImage.measuredWidth,
             ui.canvasImage.measuredHeight,

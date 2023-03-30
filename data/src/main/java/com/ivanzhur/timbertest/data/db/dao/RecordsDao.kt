@@ -14,4 +14,7 @@ interface RecordsDao {
 
     @Insert
     fun saveRecord(record: RecordEntity)
+
+    @Query("""SELECT * FROM records WHERE id = :id""")
+    fun getRecord(id: Int): RecordEntity
 }

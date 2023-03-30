@@ -27,8 +27,4 @@ class RecordListViewModel @Inject constructor(
             .catch { t -> Timber.e(t) }
             .collect { recordsLiveData.postValue(it) }
     }
-
-    fun testNewItem() = launch(Dispatchers.IO) {
-        storageRepository.saveRecord(RecordModel(0))
-    }
 }

@@ -10,6 +10,9 @@
         <action
             android:id="@+id/action_navigation_record_list_to_navigation_measurement"
             app:destination="@id/navigation_measurement" />
+        <action
+            android:id="@+id/action_navigation_record_list_to_navigation_details"
+            app:destination="@id/navigation_details" />
     </fragment>
 
     <fragment
@@ -19,5 +22,14 @@
         <argument
             android:name="image_uri"
             app:argType="android.net.Uri" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_details"
+        android:name="com.ivanzhur.timbertest.fragment.details.RecordDetailsFragment" >
+
+        <argument
+            android:name="record_id"
+            app:argType="integer" />
     </fragment>
 </navigation>

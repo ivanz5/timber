@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">TimberTest</string>
     <string name="list_button_new_measurement">New measurement</string>
+    <string name="list_item_description">ID: %d\nLength %.0f cm\nDiameter: %.0f cm</string>
     <string name="measurement_button_save">Save</string>
     <string name="measurement_button_length">Measure\nlength</string>
     <string name="measurement_button_diameter">Measure\ndiameter</string>
@@ -9,4 +10,8 @@
     <string name="measurement_guidance">Press corresponding button to measure length or diameter of a log and then draw a line on image. You can reset measurement and try again if you don\'t like it.</string>
     <string name="measurement_result_length">Length: %.0f cm\n</string>
     <string name="measurement_result_diameter">Diameter: %.0f cm\n</string>
+    <string name="measurement_save_error">Cannot save because of invalid data</string>
+    <string name="measurement_invalid_length">Length line is missing</string>
+    <string name="measurement_invalid_diameter">Diameter line is missing</string>
+    <string name="measurement_invalid_distance">Distance between length and diameter lines is too big. Seems it is incorrect measurement.</string>
 </resources>
